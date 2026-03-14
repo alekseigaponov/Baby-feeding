@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Амина — Трекер кормления</title>
+  <link rel="icon" type="image/svg+xml" href="logo.svg" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
+</head>
+<body>
+  <!-- SIDEBAR NAV -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" class="logo-svg">
+          <defs>
+            <radialGradient id="lg1" cx="40%" cy="35%" r="60%">
+              <stop offset="0%" stop-color="#ffd6a5"/>
+              <stop offset="100%" stop-color="#f4a56a"/>
+            </radialGradient>
+            <radialGradient id="lg2" cx="50%" cy="30%" r="55%">
+              <stop offset="0%" stop-color="#ffe8d6"/>
+              <stop offset="100%" stop-color="#f9c49a"/>
+            </radialGradient>
+          </defs>
+          <!-- Moon shape (crescent) -->
+          <circle cx="24" cy="24" r="18" fill="url(#lg1)" class="logo-moon"/>
+          <circle cx="30" cy="18" r="12" fill="#fff8f2" class="logo-cutout"/>
+          <!-- Stars -->
+          <circle cx="10" cy="12" r="1.5" fill="#f4a56a" class="star s1"/>
+          <circle cx="38" cy="36" r="1" fill="#f4a56a" class="star s2"/>
+          <circle cx="40" cy="14" r="1.2" fill="#ffd6a5" class="star s3"/>
+          <!-- Milk drop -->
+          <ellipse cx="22" cy="30" rx="4" ry="5" fill="url(#lg2)" class="drop"/>
+          <ellipse cx="22" cy="26" rx="2.5" ry="2" fill="url(#lg2)" class="drop-top"/>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <span class="logo-title">Амина</span>
+        <span class="logo-sub">Трекер кормления</span>
+      </div>
+    </div>
+
+    <div class="nav-section-label">Навигация</div>
+    <ul class="nav-links">
+      <li><button class="nav-btn active" data-page="dashboard">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>
+        Дашборд
+      </button></li>
+      <li><button class="nav-btn" data-page="log">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        Записать кормление
+      </button></li>
+      <li><button class="nav-btn" data-page="history">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        История
+      </button></li>
+      <li><button class="nav-btn" data-page="weight">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Вес &amp; Рост
+      </button></li>
+      <li><button class="nav-btn" data-page="insights">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+        Инсайты
+      </button></li>
+    </ul>
+
+    <div class="sidebar-bottom">
+      <div class="baby-age-card">
+        <div class="baby-age-label">Возраст Амины</div>
+        <div class="baby-age-value" id="babyAge">— дней</div>
+        <div class="baby-born">Рождена 17 февр. 2026</div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HAMBURGER -->
+  <button class="hamburger" id="hamburger" aria-label="Меню">
+    <span></span><span></span><span></span>
+  </button>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content" id="mainContent">
+
+    <!-- ===== DASHBOARD PAGE ===== -->
+    <div class="page active" id="page-dashboard">
+      <header class="page-header">
+        <div class="header-left">
+          <h1 class="page-title">Дашборд</h1>
+          <p class="page-subtitle" id="todayDateStr">—</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn-primary" onclick="switchPage('log')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Записать
+          </button>
+        </div>
+      </header>
+
+      <!-- STAT CARDS -->
+      <div class="stats-grid">
+        <div class="stat-card" style="--accent:#f4a56a">
+          <div class="stat-icon">🍼</div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-today-feedings">—</div>
+            <div class="stat-label">Кормлений сегодня</div>
+          </div>
+        </div>
+        <div class="stat-card" style="--accent:#a8d8ea">
+          <div class="stat-icon">💧</div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-today-breast">—</div>
+            <div class="stat-label">Грудь сегодня (мл)</div>
+          </div>
+        </div>
+        <div class="stat-card" style="--accent:#c9b8ff">
+          <div class="stat-icon">🥛</div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-today-formula">—</div>
+            <div class="stat-label">Смесь сегодня (мл)</div>
+          </div>
+        </div>
+        <div class="stat-card" style="--accent:#b8e6c8">
+          <div class="stat-icon">⚖️</div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-latest-weight">—</div>
+            <div class="stat-label">Последний вес (кг)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHARTS ROW -->
+      <div class="charts-row">
+        <div class="chart-card wide">
+          <div class="chart-header">
+            <h3>Питание по дням</h3>
+            <div class="chart-legend">
+              <span class="legend-dot" style="background:#f4a56a"></span>Грудь (мл)
+              <span class="legend-dot" style="background:#c9b8ff;margin-left:12px"></span>Смесь (мл)
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="chartDailyFeed"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header"><h3>Грудь Л vs П</h3></div>
+          <div class="chart-wrap"><canvas id="chartBreastSplit"></canvas></div>
+        </div>
+      </div>
+
+      <!-- LAST FEEDING + NEXT FEEDING -->
+      <div class="info-row">
+        <div class="info-card">
+          <div class="info-card-label">Последнее кормление</div>
+          <div class="info-card-main" id="lastFeedingTime">—</div>
+          <div class="info-card-sub" id="lastFeedingDetails">—</div>
+        </div>
+        <div class="info-card highlight">
+          <div class="info-card-label">Рекомендуемое следующее</div>
+          <div class="info-card-main" id="nextFeedingTime">—</div>
+          <div class="info-card-sub">через ~3 часа после последнего</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">Среднее кормлений / день</div>
+          <div class="info-card-main" id="avgFeedingsPerDay">—</div>
+          <div class="info-card-sub">за всё время наблюдений</div>
+        </div>
+      </div>
+
+      <!-- RECENT FEEDINGS TABLE -->
+      <div class="table-card">
+        <div class="table-header">
+          <h3>Последние 5 кормлений</h3>
+          <button class="btn-link" onclick="switchPage('history')">Все записи →</button>
+        </div>
+        <div class="table-wrap">
+          <table class="feed-table" id="recentTable">
+            <thead><tr>
+              <th>Дата/Время</th>
+              <th>Грудь Л</th>
+              <th>Грудь П</th>
+              <th>Смесь</th>
+              <th>Итого</th>
+              <th>Вес до</th>
+            </tr></thead>
+            <tbody id="recentTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== LOG PAGE ===== -->
+    <div class="page" id="page-log">
+      <header class="page-header">
+        <h1 class="page-title">Записать кормление</h1>
+        <p class="page-subtitle">Добавь новую запись</p>
+      </header>
+
+      <div class="form-card">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Дата</label>
+            <input type="date" id="form-date" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>Время</label>
+            <input type="time" id="form-time" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label>Грудь ЛЕВАЯ (мл)</label>
+            <input type="number" id="form-bl" class="form-input" placeholder="0" min="0" max="200" />
+          </div>
+          <div class="form-group">
+            <label>Грудь ПРАВАЯ (мл)</label>
+            <input type="number" id="form-br" class="form-input" placeholder="0" min="0" max="200" />
+          </div>
+          <div class="form-group">
+            <label>Смесь (мл)</label>
+            <input type="number" id="form-formula" class="form-input" placeholder="0" min="0" max="200" />
+          </div>
+          <div class="form-group">
+            <label>Вес до (кг)</label>
+            <input type="number" id="form-wb" class="form-input" placeholder="3.500" step="0.001" min="1" max="15" />
+          </div>
+          <div class="form-group">
+            <label>Вес после левой (кг)</label>
+            <input type="number" id="form-wal" class="form-input" placeholder="3.540" step="0.001" min="1" max="15" />
+          </div>
+          <div class="form-group">
+            <label>Вес после правой (кг)</label>
+            <input type="number" id="form-war" class="form-input" placeholder="3.580" step="0.001" min="1" max="15" />
+          </div>
+          <div class="form-group full-width">
+            <label>Комментарий</label>
+            <input type="text" id="form-comment" class="form-input" placeholder="Необязательно..." />
+          </div>
+        </div>
+        <div class="form-preview" id="formPreview" style="display:none">
+          <div class="preview-label">Итого молока:</div>
+          <div class="preview-value" id="previewTotal">—</div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-secondary" onclick="resetForm()">Сбросить</button>
+          <button class="btn-primary" onclick="saveFeeding()">Сохранить запись</button>
+        </div>
+        <div class="form-success" id="formSuccess" style="display:none">
+          ✅ Запись сохранена!
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== HISTORY PAGE ===== -->
+    <div class="page" id="page-history">
+      <header class="page-header">
+        <h1 class="page-title">История кормлений</h1>
+        <div class="header-actions">
+          <input type="date" id="historyFilter" class="form-input small" />
+          <button class="btn-secondary" onclick="clearHistoryFilter()">Все даты</button>
+        </div>
+      </header>
+
+      <div class="table-card">
+        <div class="table-wrap">
+          <table class="feed-table" id="historyTable">
+            <thead><tr>
+              <th>Дата</th>
+              <th>Время</th>
+              <th>Грудь Л</th>
+              <th>Грудь П</th>
+              <th>Смесь</th>
+              <th>Итого</th>
+              <th>Вес до</th>
+              <th>Прибавка</th>
+              <th>Комментарий</th>
+              <th></th>
+            </tr></thead>
+            <tbody id="historyTableBody"></tbody>
+          </table>
+        </div>
+        <div class="table-pagination" id="historyPagination"></div>
+      </div>
+    </div>
+
+    <!-- ===== WEIGHT PAGE ===== -->
+    <div class="page" id="page-weight">
+      <header class="page-header">
+        <h1 class="page-title">Вес &amp; Динамика</h1>
+        <p class="page-subtitle">Отслеживание роста Амины</p>
+      </header>
+
+      <div class="stats-grid">
+        <div class="stat-card" style="--accent:#b8e6c8">
+          <div class="stat-icon">🌱</div>
+          <div class="stat-body">
+            <div class="stat-value" id="w-birth">2.71 кг</div>
+            <div class="stat-label">Вес при рождении</div>
+          </div>
+        </div>
+        <div class="stat-card" style="--accent:#a8d8ea">
+          <div class="stat-icon">📈</div>
+          <div class="stat-body">
+            <div class="stat-value" id="w-current">— кг</div>
+            <div class="stat-label">Текущий вес</div>
+          </div>
+        </div>
+        <div class="stat-card" style="--accent:#f4a56a">
+          <div class="stat-icon">✨</div>
+          <div class="stat-body">
+            <div class="stat-value" id="w-gain">+— г</div>
+            <div class="stat-label">Прибавка с рождения</div>
+          </div>
+        </div>
+        <div class="stat-card" style="--accent:#ffd6a5">
+          <div class="stat-icon">📅</div>
+          <div class="stat-body">
+            <div class="stat-value" id="w-daily">— г/день</div>
+            <div class="stat-label">Среднесуточная прибавка</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-card" style="grid-column: 1/-1">
+        <div class="chart-header"><h3>Динамика веса</h3></div>
+        <div class="chart-wrap tall"><canvas id="chartWeight"></canvas></div>
+      </div>
+
+      <div class="chart-card" style="grid-column: 1/-1; margin-top: 16px;">
+        <div class="chart-header"><h3>Суточная прибавка в весе (г)</h3></div>
+        <div class="chart-wrap"><canvas id="chartDailyGain"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ===== INSIGHTS PAGE ===== -->
+    <div class="page" id="page-insights">
+      <header class="page-header">
+        <h1 class="page-title">Инсайты</h1>
+        <p class="page-subtitle">Умный анализ кормлений</p>
+      </header>
+      <div class="insights-grid" id="insightsGrid"></div>
+    </div>
+
+  </main>
+
+  <!-- DELETE CONFIRM MODAL -->
+  <div class="modal-overlay" id="deleteModal" style="display:none">
+    <div class="modal">
+      <div class="modal-title">Удалить запись?</div>
+      <div class="modal-body">Эта запись будет удалена без возможности восстановления.</div>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeDeleteModal()">Отмена</button>
+        <button class="btn-danger" onclick="confirmDelete()">Удалить</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
