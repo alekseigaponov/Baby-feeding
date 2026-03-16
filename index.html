@@ -480,7 +480,42 @@ body{
 }
 .sheet-footer .btn-p{flex:1;justify-content:center;}
 
-/* ── WEIGHING FORM ── */
+/* ── MILESTONE BANNER ── */
+.milestone-banner{
+  display:none;
+  border-radius:var(--r2);
+  padding:18px 20px;
+  margin-bottom:18px;
+  position:relative;
+  overflow:hidden;
+  cursor:default;
+  background:linear-gradient(135deg,#fff9f0,#ffecd8);
+  border:1.5px solid rgba(244,165,106,.4);
+  box-shadow:var(--sh2);
+  animation:milestoneIn .5s var(--ease);
+}
+.milestone-banner.show{display:block;}
+@keyframes milestoneIn{from{opacity:0;transform:translateY(-10px) scale(.98)}to{opacity:1;transform:none}}
+.mb-emoji{font-size:2rem;line-height:1;margin-bottom:8px;display:block;}
+.mb-title{font-family:var(--font-d);font-size:1.2rem;color:var(--text1);font-weight:500;margin-bottom:4px;}
+.mb-text{font-size:.84rem;color:var(--text2);line-height:1.5;}
+.mb-close{
+  position:absolute;top:10px;right:12px;
+  background:none;border:none;font-size:1.1rem;
+  color:var(--text3);cursor:pointer;padding:4px 8px;
+  border-radius:8px;line-height:1;
+}
+.mb-close:hover{background:var(--cream3);}
+/* Confetti dots */
+.mb-dot{
+  position:absolute;border-radius:50%;
+  pointer-events:none;
+  animation:mbFall linear infinite;
+}
+@keyframes mbFall{
+  0%{transform:translateY(-20px) rotate(0deg);opacity:1}
+  100%{transform:translateY(120px) rotate(360deg);opacity:0}
+}
 .weigh-section{display:flex;flex-direction:column;gap:0;margin-bottom:6px;}
 .weigh-title{font-family:var(--font-d);font-size:1rem;font-weight:500;color:var(--text1);margin-bottom:14px;}
 .weigh-step{display:flex;align-items:flex-start;gap:13px;padding:14px 0;border-bottom:1px solid var(--border);}
@@ -680,6 +715,14 @@ body{
         <h1 class="ph-title">Дашборд</h1>
         <p class="ph-sub" id="todayDateStr"></p>
       </div>
+    </div>
+
+    <!-- Milestone banner -->
+    <div class="milestone-banner" id="milestoneBanner">
+      <button class="mb-close" onclick="closeMilestoneBanner()">×</button>
+      <span class="mb-emoji" id="milestoneEmoji">🎉</span>
+      <div class="mb-title" id="milestoneTitle">Поздравляем!</div>
+      <div class="mb-text" id="milestoneText"></div>
     </div>
 
     <div class="stats-grid">
@@ -1400,12 +1443,131 @@ function initDates(){
   ['form-time','fab-time'].forEach(id=>document.getElementById(id).value=ts);
 }
 
+const BIRTH = new Date('2026-02-17T00:00:00');
+
+function getAgeData(){
+  const now = new Date();
+  const totalDays = Math.floor((now - BIRTH) / 86400000);
+
+  // Точный расчёт полных месяцев и дней
+  let months = (now.getFullYear() - BIRTH.getFullYear()) * 12 + (now.getMonth() - BIRTH.getMonth());
+  let afterMonths = new Date(BIRTH.getFullYear(), BIRTH.getMonth() + months, BIRTH.getDate());
+  if(afterMonths > now){ months--; afterMonths = new Date(BIRTH.getFullYear(), BIRTH.getMonth() + months, BIRTH.getDate()); }
+  const daysAfterMonths = Math.floor((now - afterMonths) / 86400000);
+  const weeks = Math.floor(totalDays / 7);
+  const remDays = totalDays % 7;
+  const weeksAfterMonths = Math.floor(daysAfterMonths / 7);
+  const remDaysAfterWeeks = daysAfterMonths % 7;
+
+  return { totalDays, months, weeks, remDays, weeksAfterMonths, remDaysAfterWeeks, daysAfterMonths };
+}
+
+function fmtAge(a){
+  if(a.totalDays < 7)   return `${a.totalDays} дн.`;
+  if(a.totalDays < 28)  return `${a.weeks} нед.${a.remDays>0?' '+a.remDays+' дн.':''}`;
+  if(a.months < 1)      return `${a.weeks} нед.${a.remDays>0?' '+a.remDays+' дн.':''}`;
+  // 1+ месяц
+  const mStr = `${a.months} ${plural(a.months,'месяц','месяца','месяцев')}`;
+  if(a.weeksAfterMonths > 0 && a.remDaysAfterWeeks > 0)
+    return `${mStr} ${a.weeksAfterMonths} нед. ${a.remDaysAfterWeeks} дн.`;
+  if(a.weeksAfterMonths > 0) return `${mStr} ${a.weeksAfterMonths} нед.`;
+  if(a.daysAfterMonths > 0)  return `${mStr} ${a.daysAfterMonths} дн.`;
+  return mStr;
+}
+
+function plural(n, one, few, many){
+  const mod10=n%10, mod100=n%100;
+  if(mod10===1&&mod100!==11) return one;
+  if(mod10>=2&&mod10<=4&&(mod100<10||mod100>=20)) return few;
+  return many;
+}
+
+// Проверяем: сегодня круглая дата?
+function checkMilestone(a){
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0,10);
+  const dismissed = localStorage.getItem('amina_milestone_dismissed');
+  if(dismissed === todayStr) return null; // уже закрыли сегодня
+
+  // Точно в день рождения (кратно 1 месяцу)
+  const isMonthDay = now.getDate() === BIRTH.getDate() && a.months >= 1 && a.daysAfterMonths === 0;
+  const isWeekDay  = a.totalDays > 0 && a.totalDays % 7 === 0 && a.months === 0; // недели только до 1 мес
+
+  if(isMonthDay){
+    const m = a.months;
+    const milestones = {
+      1: { emoji:'🌙', title:`Нам 1 месяц! 🎉`, text:`Целый месяц вместе! Амина уже умеет улыбаться, узнаёт мамин голос и знает что после плача приходит самое вкусное 🍼` },
+      2: { emoji:'🌸', title:`Нам 2 месяца!`, text:`Два месяца — это уже серьёзно! Амина научилась держать головку и, кажется, уже командует всем домом 👑` },
+      3: { emoji:'⭐', title:`Нам 3 месяца — квартал!`, text:`Три месяца! Первый квартал жизни позади. Амина теперь настоящий гуру общения: улыбается, гулит и очаровывает всех вокруг ✨` },
+      4: { emoji:'🦋', title:`Нам 4 месяца!`, text:`Четыре месяца! Амина уже тянется за игрушками, смеётся вслух и чётко знает: мама — лучший человек на свете 💛` },
+      5: { emoji:'🌻', title:`Нам 5 месяцев!`, text:`Пять месяцев! Почти полгода. Скоро первый прикорм и новые открытия. А пока — ещё молоко и много объятий 🤗` },
+      6: { emoji:'🎂', title:`Полгода! 6 месяцев!`, text:`ПОЛ-ГО-ДА! Это огромный праздник! Амина выросла вдвое от рождения, научилась сидеть и теперь смотрит на мир с новой высоты 🚀` },
+      7: { emoji:'🍎', title:`Нам 7 месяцев!`, text:`Семь месяцев! Амина уже знакомится с первыми вкусами, активно ползёт куда не надо и улыбается во весь беззубый рот 😄` },
+      8: { emoji:'🐣', title:`Нам 8 месяцев!`, text:`Восемь месяцев! Скоро первые шаги. Амина уже встаёт, держась за что попало, и смотрит на мир как настоящий исследователь 🔍` },
+      9: { emoji:'🌈', title:`Нам 9 месяцев!`, text:`Девять месяцев снаружи — столько же, сколько было внутри! Теперь Амина сама решает куда ползти и что брать в рот (всё подряд 😅)` },
+      10:{ emoji:'🎯', title:`Нам 10 месяцев!`, text:`Десять месяцев! Два месяца до первого дня рождения. Амина говорит «ма-ма» и «да-да» и пользуется этим в полной мере 💬` },
+      11:{ emoji:'🦁', title:`Нам 11 месяцев!`, text:`Одиннадцать месяцев! Ещё один месяц — и уже год! Амина почти ходит, уже всё понимает и делает вид что не слышит 😇` },
+      12:{ emoji:'🎊', title:`Нам 1 ГОД! 🎉🎊🎈`, text:`ОДИН ГОД! Это невероятно! 365 дней любви, кормлений, открытий и бессонных ночей. Вы справились. Амина — лучшее что с вами случилось 💖` },
+    };
+    const def = { emoji:'🎉', title:`Нам ${m} ${plural(m,'месяц','месяца','месяцев')}!`, text:`Ещё один месяц позади — и он был лучшим! Амина растёт и радует каждый день 🌟` };
+    return milestones[m] || def;
+  }
+
+  if(isWeekDay && a.weeks > 0){
+    const w = a.weeks;
+    const weekMilestones = {
+      1: { emoji:'🌱', title:`Нам 1 неделя!`, text:`Первая неделя дома! Все немного не спят, все безумно счастливы. Амина уже знает кто тут главная 👶` },
+      2: { emoji:'🌿', title:`Нам 2 недели!`, text:`Две недели! Амина уже прибавила в весе — молоко работает! Мама молодец, продолжаем 💪` },
+      3: { emoji:'✨', title:`Нам 3 недели!`, text:`Три недели! Скоро месяц. Амина смотрит на мир всё осознаннее — и мир отвечает ей взаимностью 🌍` },
+    };
+    return weekMilestones[w] || null;
+  }
+  return null;
+}
+
 function updateAge(){
-  const d=Math.floor((new Date()-new Date('2026-02-17'))/86400000);
-  const w=Math.floor(d/7),r=d%7,txt=w>0?`${w} нед. ${r} дн.`:`${d} дн.`;
-  document.getElementById('babyAge').textContent=txt;
-  const ma=document.getElementById('mobileAge');
-  if(ma)ma.textContent=txt;
+  const a = getAgeData();
+  const txt = fmtAge(a);
+  document.getElementById('babyAge').textContent = txt;
+  const ma = document.getElementById('mobileAge');
+  if(ma) ma.textContent = txt;
+  // Проверяем праздник
+  showMilestoneIfNeeded(a);
+}
+
+function showMilestoneIfNeeded(a){
+  const m = checkMilestone(a);
+  const banner = document.getElementById('milestoneBanner');
+  if(!m || !banner){ if(banner) banner.classList.remove('show'); return; }
+  document.getElementById('milestoneEmoji').textContent = m.emoji;
+  document.getElementById('milestoneTitle').textContent = m.title;
+  document.getElementById('milestoneText').textContent  = m.text;
+  banner.classList.add('show');
+  spawnConfetti(banner);
+}
+
+function closeMilestoneBanner(){
+  const banner = document.getElementById('milestoneBanner');
+  if(banner) banner.classList.remove('show');
+  // Запоминаем что сегодня уже закрыли
+  localStorage.setItem('amina_milestone_dismissed', new Date().toISOString().slice(0,10));
+}
+window.closeMilestoneBanner = closeMilestoneBanner;
+
+function spawnConfetti(container){
+  const colors=['#f4a56a','#c9b8ff','#a8d8ea','#b8e6c8','#ffd6a5','#f9c49a'];
+  // Убираем старые
+  container.querySelectorAll('.mb-dot').forEach(d=>d.remove());
+  for(let i=0;i<18;i++){
+    const dot=document.createElement('div');
+    dot.className='mb-dot';
+    const size=4+Math.random()*6;
+    const left=5+Math.random()*90;
+    const delay=Math.random()*2;
+    const dur=1.5+Math.random()*2;
+    dot.style.cssText=`width:${size}px;height:${size}px;background:${colors[Math.floor(Math.random()*colors.length)]};left:${left}%;top:0;animation-duration:${dur}s;animation-delay:${delay}s;opacity:0`;
+    container.appendChild(dot);
+  }
 }
 
 function updateTodayStr(){
