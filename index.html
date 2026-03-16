@@ -1308,17 +1308,34 @@ function initFirebase(){
     db=getDatabase(app);
     fbRef=ref(db,'feedings');
     setSyncStatus('connecting');
-    // Listen for realtime changes
+
+    // Сразу показываем данные из localStorage пока Firebase грузится
+    const cached=lsLoad();
+    if(cached&&cached.length>0){
+      feedings=cached; sort(); renderAll(); updateAge(); updateTodayStr();
+    }
+
+    // Слушаем Firebase — обновляем всё при каждом изменении
     unsubscribe=onValue(fbRef,(snap)=>{
       const val=snap.val();
       if(val&&Array.isArray(val)){
         feedings=val; sort(); lsSave(feedings);
-        renderAll(); setSyncStatus('online');
+        renderAll();
+        // Обновляем возраст и дату при каждой синхронизации
+        updateAge(); updateTodayStr();
+        setSyncStatus('online');
+        // Запускаем таймер если ещё не запущен
+        if(!insightsTimer) insightsTimer=setInterval(()=>{if(!document.hidden){renderInsights();updateAge();}},60000);
       } else if(val===null){
-        // First time: seed Firebase with initial data
+        // Первый запуск: загружаем начальные данные в Firebase
         const seed=lsLoad()||INITIAL_DATA;
         const {set}=window._fb;
-        set(fbRef,seed).then(()=>setSyncStatus('online'));
+        set(fbRef,seed).then(()=>{
+          feedings=seed; sort(); lsSave(feedings);
+          renderAll(); updateAge(); updateTodayStr();
+          setSyncStatus('online');
+          if(!insightsTimer) insightsTimer=setInterval(()=>{if(!document.hidden){renderInsights();updateAge();}},60000);
+        });
       }
     },(err)=>{ console.error('FB read error',err); setSyncStatus('error'); fallbackBoot(); });
   } catch(e){ console.error('FB init error',e); setSyncStatus('error'); fallbackBoot(); }
@@ -1326,7 +1343,8 @@ function initFirebase(){
 
 function fallbackBoot(){
   feedings=lsLoad()||[...INITIAL_DATA]; sort(); renderAll();
-  if(!insightsTimer) insightsTimer=setInterval(()=>{if(!document.hidden)renderInsights();},60000);
+  updateAge(); updateTodayStr();
+  if(!insightsTimer) insightsTimer=setInterval(()=>{if(!document.hidden){renderInsights();updateAge();}},60000);
 }
 
 // ── FIREBASE CONFIG PERSISTENCE ──
@@ -1422,16 +1440,25 @@ let insightsTimer=null;
 
 function bootApp(){
   feedings=lsLoad()||[...INITIAL_DATA]; sort();
-  renderAll();
-  // Запускаем таймер только один раз
-  if(!insightsTimer) insightsTimer=setInterval(()=>{if(!document.hidden)renderInsights();},60000);
+  renderAll(); updateAge(); updateTodayStr();
+  if(!insightsTimer) insightsTimer=setInterval(()=>{if(!document.hidden){renderInsights();updateAge();}},60000);
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
   initDates(); updateAge(); updateTodayStr(); bindAll();
+
+  // Сразу показываем кэш из localStorage — не ждём Firebase
+  const cached = lsLoad();
+  if(cached && cached.length > 0){
+    feedings = cached; sort(); renderAll();
+  }
+
   initFirebase();
-  // Если Firebase не отвечает за 3с — грузим из localStorage
+  // Если Firebase не ответил за 3с — работаем локально
   setTimeout(()=>{ if(syncStatus==='connecting'){ fallbackBoot(); }},3000);
+
+  // Обновляем возраст каждую минуту (для живого отображения)
+  setInterval(()=>{ updateAge(); updateTodayStr(); }, 60000);
 });
 
 function sort(){feedings.sort((a,b)=>{const da=a.date+'T'+(a.time||'00:00'),db2=b.date+'T'+(b.time||'00:00');return da<db2?-1:da>db2?1:0;});}
@@ -2174,13 +2201,14 @@ window.closeFab=closeFab;window.saveFabFeeding=saveFabFeeding;
 window.renderInsights=renderInsights;
 window.openSetup=openSetup;window.closeSetup=closeSetup;window.applyFirebaseConfig=applyFirebaseConfig;
 
-// BUG 11 fix: пауза таймера когда вкладка скрыта
+// Пауза таймера когда вкладка скрыта, обновление при возврате
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden){
     if(insightsTimer){clearInterval(insightsTimer);insightsTimer=null;}
   } else {
-    renderInsights(); // сразу обновить при возврате
-    if(!insightsTimer) insightsTimer=setInterval(()=>{if(!document.hidden)renderInsights();},60000);
+    // При возврате сразу обновляем всё
+    renderInsights(); updateAge(); updateTodayStr();
+    if(!insightsTimer) insightsTimer=setInterval(()=>{if(!document.hidden){renderInsights();updateAge();}},60000);
   }
 });
 </script>
