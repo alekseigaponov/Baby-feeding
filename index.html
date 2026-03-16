@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="theme-color" content="#fdf8f3"/>
@@ -1118,13 +1121,13 @@ window.dispatchEvent(new Event('fbsdk'));
 // FIREBASE CONFIG  ← вставь свои значения
 // ══════════════════════════════════════════
 const FIREBASE_CONFIG = {
-  apiKey:            "PASTE_YOUR_apiKey_HERE",
-  authDomain:        "PASTE_YOUR_authDomain_HERE",
-  databaseURL:       "PASTE_YOUR_databaseURL_HERE",
-  projectId:         "PASTE_YOUR_projectId_HERE",
-  storageBucket:     "PASTE_YOUR_storageBucket_HERE",
-  messagingSenderId: "PASTE_YOUR_messagingSenderId_HERE",
-  appId:             "PASTE_YOUR_appId_HERE"
+  apiKey:            "AIzaSyDfjhz9W63dM1xyVsU1A3c1esRSgF0KhwA",
+  authDomain:        "amina-tracker-2c1a5.firebaseapp.com",
+  databaseURL:       "https://amina-tracker-2c1a5-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:         "amina-tracker-2c1a5",
+  storageBucket:     "amina-tracker-2c1a5.firebasestorage.app",
+  messagingSenderId: "162197249822",
+  appId:             "1:162197249822:web:29da91091517010adfb30f"
 };
 
 // ══════════════════════════════════════════
@@ -1298,10 +1301,6 @@ async function saveData(arr){
 // ── Firebase init & realtime listener ──
 function initFirebase(){
   if(!window._fbReady){ window.addEventListener('fbsdk',initFirebase,{once:true}); return; }
-  if(FIREBASE_CONFIG.apiKey==='PASTE_YOUR_apiKey_HERE'){
-    console.warn('Firebase не настроен — работаем локально');
-    setSyncStatus('local'); bootApp(); return;
-  }
   try {
     const {initializeApp,getDatabase,ref,onValue}=window._fb;
     const app=initializeApp(FIREBASE_CONFIG);
